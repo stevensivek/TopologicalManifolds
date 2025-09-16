@@ -304,7 +304,6 @@ noncomputable def homeomorph_Icc_rescale {a : ℝ} (ha : a > 0) :
 noncomputable def homeomorph_Icc_unitInterval {a b : ℝ} (hab : a < b) :
     Homeomorph (Icc a b) unitInterval := by
   let f : Icc a b ≃ₜ Icc 0 (b - a) := homeomorph_Icc_shift a b
-  have : b - a > 0 := by exact sub_pos.mpr hab
   let g : Icc 0 (b - a) ≃ₜ unitInterval := homeomorph_Icc_rescale (sub_pos.mpr hab)
   exact f.trans g
 

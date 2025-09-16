@@ -17,7 +17,7 @@ variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
   {E : Type*} [NormedAddCommGroup E] [NormedSpace 𝕜 E]
   {H : Type*} [TopologicalSpace H]
 
-open ModelWithCorners
+open ModelWithCorners InvarianceOfDomain
 
 namespace Gluing
 

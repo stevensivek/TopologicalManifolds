@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2025 Steven Sivek. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Steven Sivek
+-/
 import Mathlib.Tactic
 import Mathlib.Topology.Defs.Basic
 import Mathlib.Topology.Defs.Induced
