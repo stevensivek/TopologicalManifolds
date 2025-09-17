@@ -27,8 +27,8 @@ understood to be a 1-manifold with boundary if it is an instance of
 
 ## Main results
 
-- `double_halfInterval`: the double of `EuclideanHalfSpace 1` is homeomorphic
-  to `EuclideanSpace ℝ (Fin 1)` = ℝ¹.
+- `double_halfSpace`: the double of `EuclideanHalfSpace n` is homeomorphic
+  to `EuclideanSpace ℝ (Fin n)` = ℝⁿ.
 - `double_is_R`: if the double of `M` is homeomorphic to `ℝ`, then `M` is
   homeomorphic to `Ici (0 : ℝ)` = [0,∞).
 - `double_is_R_iff` : the double of `M` is homeomorphic to `ℝ` if and only if
@@ -46,123 +46,131 @@ open Set Function Manifold Topology
 local macro:max "ℝ"n:superscript(term) : term => `(EuclideanSpace ℝ (Fin $(⟨n.raw[0]⟩)))
 
 namespace DoubleInterval
-open Gluing Double ComplexConjugate TopCat
+open Gluing Double ComplexConjugate TopCat EuclideanSpace
 
-theorem double_halfInterval : Nonempty (double (𝓡∂ 1) (EuclideanHalfSpace 1) ≃ₜ ℝ¹) := by
-  let H := EuclideanHalfSpace 1
-  let φ : EuclideanSpace ℝ (Fin 1) ≃ₜ ℝ := Homeomorph.funUnique (Fin 1) ℝ
-  have hφ {t : ℝ¹} : φ t = t 0 := by exact rfl
+private noncomputable def space_flip {n : ℕ} [NeZero n] : Homeomorph ℝⁿ ℝⁿ := by
+  let M : Matrix (Fin n) (Fin n) ℝ :=
+    Matrix.diagonal (fun i ↦ if i = 0 then -1 else 1)
+  have hMsquared : M * M = 1 := by
+    rw [Matrix.diagonal_mul_diagonal, ← Matrix.diagonal_one]
+    apply Matrix.diagonal_eq_diagonal_iff.mpr
+    intro i
+    simp_all only [mul_ite, mul_neg, mul_one, ↓reduceIte, neg_neg, ite_self]
+  let φ : ℝⁿ → ℝⁿ := Matrix.toLin' M
+  have hφsquared : φ ∘ φ = id := by
+    ext x i
+    simp [φ, Matrix.mulVec_mulVec, hMsquared]
+  have hφCont : Continuous φ := by
+    exact LinearMap.continuous_of_finiteDimensional (Matrix.toLin' M)
+  exact {
+    toFun := φ,
+    invFun := φ,
+    left_inv := by exact congrFun hφsquared,
+    right_inv := by exact congrFun hφsquared,
+    continuous_toFun := hφCont,
+    continuous_invFun := hφCont
+  }
 
-  let f₀ : H → ℝ := fun t ↦ φ t.val
-  have hfCont : Continuous f₀ := by
-    apply Continuous.comp (Homeomorph.continuous φ)
-    exact continuous_iff_le_induced.mpr fun _ a ↦ a
-  let f : C(H, ℝ) := ⟨f₀, hfCont⟩
+private lemma space_flip_fixed_point {n : ℕ} [NeZero n] {x : ℝ ⁿ} :
+    space_flip x = x ↔ x 0 = 0 := by
+  simp [space_flip]
+  constructor <;> intro hx
+  · obtain h := congrFun hx 0
+    simp [Matrix.mulVec_diagonal] at h
+    exact CharZero.eq_neg_self_iff.mp <| Eq.symm h
+  · ext i
+    simp [Matrix.mulVec_diagonal]
+    intro hi
+    rw [hi, hx, neg_zero]
 
+theorem double_halfSpace (n : ℕ) [NeZero n] :
+    Nonempty (double (𝓡∂ n) (EuclideanHalfSpace n) ≃ₜ ℝⁿ) := by
+  let H := EuclideanHalfSpace n
+
+  let f : C(H, ℝⁿ) := ⟨(𝓡∂ n), (𝓡∂ n).continuous⟩
   have hfClosed : IsClosedMap f := by
-    apply IsClosedMap.comp (Homeomorph.isClosedMap φ)
-    apply IsClosed.isClosedMap_subtype_val
-    have : IsClosed (Subtype.val '' (@univ H)) := by
-      simp only [Fin.isValue, image_univ, Subtype.range_coe_subtype]
-      have : IsClosed {x : ℝ¹ | 0 ≤ φ x} := by
-        rw [show {x : ℝ¹ | 0 ≤ φ x} = φ ⁻¹' (Ici (0 : ℝ)) by rfl]
-        exact IsClosed.preimage (Homeomorph.continuous φ) isClosed_Ici
-      exact this
-    simp_all only [Fin.isValue, image_univ, Subtype.range_coe_subtype]
-    exact this
+    apply IsInducing.isClosedMap ?_ (𝓡∂ n).isClosed_range
+    exact { eq_induced := rfl }
 
-  let g₀ : H → ℝ := fun t ↦ - (φ t.val)
-  let g : C(H, ℝ) := ⟨g₀, Continuous.neg hfCont⟩
-
+  let g₀ : H → ℝⁿ := space_flip ∘ f
+  let g : C(H, ℝⁿ) := ⟨space_flip ∘ f, Continuous.comp space_flip.continuous f.continuous⟩
   have hgClosed : IsClosedMap g := by
-    exact IsClosedMap.comp (g := fun x ↦ - x) (isClosedMap_neg ℝ) hfClosed
+    apply IsClosedMap.comp (g := space_flip)
+    · exact space_flip.isClosedMap
+    · exact hfClosed
 
-  haveI : f 0 = g 0 := by
-    rw [show f 0 = 0 by exact rfl, show g 0 = - 0 by exact rfl]
-    exact zero_eq_neg.mpr rfl
+  have hfgEqual {x : H} (hBdry : x.val 0 = 0) : f x = g x := by
+    rw [show g x = space_flip (f x) by rfl]
+    apply Eq.symm
+    apply space_flip_fixed_point.mpr
+    simp_all only [ContinuousMap.coe_mk, H, f, g]
+    exact hBdry
 
-  have bdryH : (𝓡∂ 1).boundary H = {0} := by
-    haveI : frontier (range (𝓡∂ 1)) = {y : ℝ¹ | (0 : ℝ) = y 0} := by
-      exact frontier_range_modelWithCornersEuclideanHalfSpace 1
+  have bdryH : (𝓡∂ n).boundary H = {x : H | x.val 0 = 0} := by
+    haveI : frontier (range (𝓡∂ n)) = {y : ℝⁿ | (0 : ℝ) = y 0} := by
+      exact frontier_range_modelWithCornersEuclideanHalfSpace n
     ext x
     apply Iff.trans ModelWithCorners.isBoundaryPoint_iff
     rw [extChartAt_coe x, chartAt_self_eq, PartialHomeomorph.refl_apply]
-    simp_all only [mem_singleton_iff, Function.comp_apply, id_eq, mem_setOf_eq]
-    constructor <;> intro hx
-    · apply EuclideanHalfSpace.ext_iff.mpr
-      rw [show (𝓡∂ 1) x 0 = x.val 0 by exact rfl] at hx
-      exact (show x.val = φ.symm 0 by exact EquivLike.inv_apply_eq.mp (Eq.symm hx))
-    · apply EuclideanHalfSpace.ext_iff.mp at hx
-      rw [show (𝓡∂ 1) x 0 = x.val 0 by exact rfl, hx]
-      rfl
+    simp_all only [Function.comp_apply, id_eq, mem_setOf_eq]
+    exact eq_comm
 
-  have w : CategoryTheory.CategoryStruct.comp (bdry_inc' (𝓡∂ 1) H) (TopCat.ofHom f) =
-           CategoryTheory.CategoryStruct.comp (bdry_inc' (𝓡∂ 1) H) (TopCat.ofHom g) := by
-    ext x
-    simp only [TopCat.hom_comp, TopCat.hom_ofHom, ContinuousMap.comp_apply]
-    rw [show (bdry_inc' (𝓡∂ 1) H) x = ↑x by exact rfl]
-    simp_all only [Fin.isValue, ContinuousMap.coe_mk, φ, f, f₀, g, g₀]
-    have hx : x.val = (0 : H) := by
-      apply eq_of_mem_singleton
-      rw [← bdryH]
-      exact Subtype.coe_prop x
-    rwa [hx]
+  have w : CategoryTheory.CategoryStruct.comp (bdry_inc' (𝓡∂ n) H) (TopCat.ofHom f) =
+           CategoryTheory.CategoryStruct.comp (bdry_inc' (𝓡∂ n) H) (TopCat.ofHom g) := by
+    ext x i
+    exact (n : ENNReal)
+    have : x ∈ @univ ((𝓡∂ n).boundary H) := by trivial
+    have : ((bdry_inc' (𝓡∂ n) H) x).val 0 = 0 := by
+      simp_all only [mem_univ, H]
+      have : (bdry_inc' (𝓡∂ n) H) x ∈ {x : H | x.val 0 = 0} := by
+        rw [← bdryH]
+        obtain h := mem_range_self (f := bdry_inc' (𝓡∂ n) H) x
+        rwa [range_bdry_inc' (𝓡∂ n) H] at h
+      exact this
+    exact congrFun (hfgEqual this) i
 
-  let ψ : double (𝓡∂ 1) H ⟶ (TopCat.of ℝ) :=
-    double.desc (𝓡∂ 1) H f g w
+  let ψ : double (𝓡∂ n) H ⟶ (TopCat.of ℝⁿ) := double.desc (𝓡∂ n) H f g w
 
   have hInjective : Injective ψ := by
     have hInjf : Injective f := by
-      intro s t hst
-      simp_all only [Fin.isValue, ContinuousMap.coe_mk, φ, H, f, f₀]
-      apply EuclideanHalfSpace.ext
-      apply PiLp.ext
-      intro i
-      rwa [Fin.fin_one_eq_zero i]
+      exact (𝓡∂ n).injective
     have hInjg : Injective g := by
-      intro s t hst
-      have : f s = f t := by
-        simp_all only [Fin.isValue, ContinuousMap.coe_mk, neg_inj, φ, H, f, f₀, g, g₀]
-      exact hInjf this
-    apply desc_injective_double (X := TopCat.of ℝ) (h := f) (k := g) (𝓡∂ 1) H w hInjf hInjg
+      exact Injective.comp (g := space_flip) space_flip.injective hInjf
+    apply desc_injective_double (X := TopCat.of ℝⁿ) (h := f) (k := g) (𝓡∂ n) H w hInjf hInjg
     intro y z hyz
     rw [bdryH]
-    simp only [mem_singleton_iff]
-    haveI : f y ≥ 0 := by exact Subtype.coe_prop y
-    haveI : f y ≤ 0 := by
-      rw [hyz, show g z = - f z by exact rfl]
-      simp only [Left.neg_nonpos_iff]
-      exact Subtype.coe_prop z
-    have : f y = 0 := by linarith
-    exact hInjf this
+    apply le_antisymm
+    · rw [show y.val 0 = f y 0 by rfl, congrFun hyz 0,
+          show g z 0 = - f z 0 by simp_all [g, f, space_flip, Matrix.mulVec_diagonal]]
+      exact Left.neg_nonpos_iff.mpr <| Subtype.coe_prop z
+    · exact Subtype.coe_prop y
 
   have hSurjective : Surjective ψ := by
-    apply desc_surjective_double (X := TopCat.of ℝ) (𝓡∂ 1) H f g w
+    apply desc_surjective_double (X := TopCat.of ℝⁿ) (𝓡∂ n) H f g w
     apply univ_subset_iff.mp
     intro x _
     apply (mem_union x (range f) (range g)).mpr
     simp only [mem_range]
-    by_cases hx : x ≥ 0
-    · left
-      use ⟨(φ.symm x), hx⟩
-      exact hφ
+    by_cases hx : x 0 ≥ 0
+    · left; use ⟨x,hx⟩; rfl
     · right
-      replace hx : - x > 0 := by exact Left.neg_pos_iff.mpr (lt_of_not_ge hx)
-      let y : H := ⟨φ.symm (- x), le_of_lt hx⟩
-      use y
-      apply neg_inj.mp
-      rw [show - g y = f y by exact neg_eq_iff_eq_neg.mpr rfl]
-      exact hφ
+      have : space_flip x 0 ≥ 0 := by
+        simp [space_flip, Matrix.mulVec_diagonal]
+        exact le_of_not_ge hx
+      use ⟨space_flip x, this⟩
+      have : space_flip (space_flip x) = x := by
+        simp [space_flip]
+        ext i
+        simp_all
+      exact this
 
   have hBijective : Bijective ψ := by exact ⟨hInjective, hSurjective⟩
-  have hContinuous : Continuous ψ := by exact ContinuousMap.continuous (TopCat.Hom.hom ψ)
-
+  have hContinuous : Continuous ψ := by exact (TopCat.Hom.hom ψ).continuous
   have hClosed : IsClosedMap ψ := by
-    exact desc_isClosedMap_double (X := TopCat.of ℝ) (𝓡∂ 1) H f g w hfClosed hgClosed
-
-  have ψ₀ : (double (𝓡∂ 1) H) ≃ₜ ℝ := Equiv.toHomeomorphOfContinuousClosed
+    exact desc_isClosedMap_double (X := TopCat.of ℝⁿ) (𝓡∂ n) H f g w hfClosed hgClosed
+  have ψ' : (double (𝓡∂ n) H) ≃ₜ ℝⁿ := Equiv.toHomeomorphOfContinuousClosed
                                       (Equiv.ofBijective ψ hBijective) hContinuous hClosed
-  exact Nonempty.intro (ψ₀.trans φ.symm)
+  exact Nonempty.intro ψ'
 
 theorem double_is_R
     {M : Type*} [TopologicalSpace M] [ChartedSpace (EuclideanHalfSpace 1) M]
@@ -243,7 +251,7 @@ theorem double_is_R_iff {M : Type}
   · let φ : M ≃ₜ EuclideanHalfSpace 1 :=
       h.some.trans ClosedInterval_homeomorph.homeomorph_halfSpace.symm
     exact Nonempty.intro <| (double_homeomorph (𝓡∂ 1) φ).trans
-                         <| double_halfInterval.some.trans
+                         <| (double_halfSpace 1).some.trans
                          <| Homeomorph.funUnique (Fin 1) ℝ
 
 theorem double_unitInterval : Nonempty (double (𝓡∂ 1) unitInterval ≃ₜ Circle) := by

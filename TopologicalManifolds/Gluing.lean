@@ -56,6 +56,12 @@ def bdry_inc' (I : ModelWithCorners 𝕜 E H)
     TopCat.of (I.boundary M) ⟶ TopCat.of M :=
   inc_mk' (I.boundary M)
 
+lemma range_bdry_inc' (I : ModelWithCorners 𝕜 E H)
+    (M : Type*) [TopologicalSpace M] [ChartedSpace H M] :
+    range (bdry_inc' I M) = I.boundary M := by
+  simp only [bdry_inc']
+  exact range_inclusion_mk (I.boundary M)
+
 variable
   {X Y : Type u} [TopologicalSpace X] [TopologicalSpace Y]
   (A : Set X) (B : Set Y)
@@ -411,9 +417,9 @@ theorem inl_eq_inr {a b : M} (hab : (double.inl I M) a = (double.inr I M) b) :
   rw [show x = (double.inr I M) b by exact hab] at hy'
   have hay : (bdry_inc' I M) y = a := by exact (injective_double_inl I M) hy
   constructor
-  · haveI : a ∈ range (bdry_inc' I M) := by
-      apply mem_range.mpr; use y
-    rwa [← range_inclusion_mk (I.boundary M)]
+  · rw [← range_bdry_inc' I M]
+    apply mem_range.mpr
+    use y
   · rw [(injective_double_inr I M) hy'] at hay
     exact Eq.symm hay
 
