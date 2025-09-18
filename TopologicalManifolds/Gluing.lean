@@ -176,6 +176,15 @@ theorem glued_range_inl_intersect_inr :
   apply TopCat.Pushout.inl_mono_intersection_inl_inr (inc_mk' A) (inc_homeo' A B φ)
   exact (inclusion.isEmbedding A).injective
 
+lemma glued_inl_locus_eq_inr_locus :
+    (glued.inl A B φ) '' A = (glued.inr A B φ) '' B := by
+  have : (inc_homeo' A B φ) '' univ = B := by
+    rw [image_univ]
+    exact range_inc_homeo A B φ
+  rw [← congrArg (image (glued.inr A B φ)) this, ← image_comp,
+      ← hom_comp, ← glued.w A B φ, hom_comp, image_comp, image_univ,
+      show range (inc_mk' A) = A by exact range_inclusion_mk A]
+
 theorem glued_range_inl_intersect_inr' :
     (range (glued.inl A B φ)) ∩ (range (glued.inr A B φ)) =
      (glued.inl A B φ) '' A := by
@@ -186,12 +195,7 @@ theorem glued_range_inl_intersect_inr' :
 theorem glued_range_inl_intersect_inr'' :
     (range (glued.inl A B φ)) ∩ (range (glued.inr A B φ)) =
      (glued.inr A B φ) '' B := by
-  have : (inc_homeo' A B φ) '' univ = B := by
-    rw [image_univ]
-    exact range_inc_homeo A B φ
-  rw [← congrArg (image (glued.inr A B φ)) this, ← image_comp,
-      ← hom_comp, ← glued.w A B φ, hom_comp, image_comp, image_univ,
-      show range (inc_mk' A) = A by exact range_inclusion_mk A]
+  rw [← glued_inl_locus_eq_inr_locus]
   exact glued_range_inl_intersect_inr' A B φ
 
 theorem glued_image_inl_complement :
@@ -220,6 +224,42 @@ theorem glued_image_inl_complement :
       simp only [mem_inter_iff, not_and]
       exact fun _ ↦ hx
     simp_all only [mem_compl_iff, mem_range, not_exists, mem_image, false_or, not_and]
+
+theorem glued_image_inr_complement :
+    (glued.inr A B φ) '' Bᶜ = (range (glued.inl A B φ))ᶜ := by
+  let il := glued.inl A B φ
+  let ir := glued.inr A B φ
+  have : il '' A ⊆ (ir '' Bᶜ)ᶜ := by
+    by_contra h
+    obtain ⟨x, hxA, hxB⟩ := not_subset.mp h
+    have hxB' : x ∈ ir '' Bᶜ := by exact not_notMem.mp hxB
+    have : x ∈ ir '' B := by
+      rw [← glued_range_inl_intersect_inr'']
+      apply mem_inter
+      · exact mem_range_of_mem_image il A hxA
+      · exact mem_range_of_mem_image ir Bᶜ hxB'
+    obtain ⟨s, hsB, hsx⟩ := this
+    obtain ⟨t, htB, htx⟩ := hxB'
+    rw [← htx] at hsx
+    rw [(injective_glued_inr A B φ) hsx] at hsB
+    exact htB hsB
+  have h : (il '' A) ∩ (ir '' Bᶜ)ᶜ = il '' A := by
+    simp_all only [image_subset_iff, preimage_compl, inter_eq_left]
+  have h' : il '' Aᶜ = (il '' A)ᶜ ∩ (ir '' Bᶜ)ᶜ := calc
+    il '' Aᶜ = (range ir)ᶜ := by exact glued_image_inl_complement A B φ
+    _ = ((ir '' B) ∪ (ir '' Bᶜ))ᶜ := by
+      rw [← image_union_image_compl_eq_range ir]
+    _ = (ir '' B)ᶜ ∩ (ir '' Bᶜ)ᶜ := by rw [compl_union]
+    _ = (il '' A)ᶜ ∩ (ir '' Bᶜ)ᶜ := by rw [← glued_inl_locus_eq_inr_locus]
+  have : range il = (ir '' Bᶜ)ᶜ := calc
+    range il = (il '' A) ∪ (il '' Aᶜ) := by
+      exact Eq.symm <| image_union_image_compl_eq_range il
+    _ = ((il '' A) ∩ (ir '' Bᶜ)ᶜ) ∪ ((il '' A)ᶜ ∩ (ir '' Bᶜ)ᶜ) := by
+      rw [h']; nth_rewrite 1 [← h]; rfl
+    _ = (ir '' Bᶜ)ᶜ := by
+      rw [← union_inter_distrib_right, union_compl_self, univ_inter]
+  rw [← compl_compl (ir '' Bᶜ)]
+  exact congrArg compl (Eq.symm this)
 
 theorem isEmbedding_glued_zero : IsEmbedding (glued.zero A B φ) := by
   apply IsEmbedding.comp (g := glued.inl A B φ)
@@ -415,16 +455,27 @@ theorem double_range_inl_intersect_inr'' :
   exact glued_range_inl_intersect_inr''
         (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
 
-theorem double_image_inl_complement :
+theorem double_image_inl_interior :
     (double.inl I M) '' (I.interior M) = (range (double.inr I M))ᶜ := by
   rw [← compl_boundary]
   exact glued_image_inl_complement (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
 
 theorem isOpen_double_inl_interior [HasInvarianceOfDomain E] :
     IsOpen ((double.inl I M) '' (I.interior M)) := by
-  rw [double_image_inl_complement]
+  rw [double_image_inl_interior]
   apply isOpen_compl_iff.mpr
   exact (isClosedEmbedding_double_inr I M).isClosed_range
+
+theorem double_image_inr_interior :
+    (double.inr I M) '' (I.interior M) = (range (double.inl I M))ᶜ := by
+  rw [← compl_boundary]
+  exact glued_image_inr_complement (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem isOpen_double_inr_interior [HasInvarianceOfDomain E] :
+    IsOpen ((double.inr I M) '' (I.interior M)) := by
+  rw [double_image_inr_interior]
+  apply isOpen_compl_iff.mpr
+  exact (isClosedEmbedding_double_inl I M).isClosed_range
 
 theorem isClosedEmbedding_double_zero [HasInvarianceOfDomain E] :
     IsClosedEmbedding (double.zero I M) := by
