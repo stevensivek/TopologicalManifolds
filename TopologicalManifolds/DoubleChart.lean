@@ -75,7 +75,6 @@ theorem doubled_target_chart {x : M} {φ : PartialHomeomorph M H}
     simp_all [V, U, φ₀, φ_restr]; rfl
 
   let il : C(H, double I H) := TopCat.Hom.hom (double.inl I H)
-  let ir : C(H, double I H) := TopCat.Hom.hom (double.inr I H)
   obtain ⟨j, hjEmbed, hjRange, _⟩ :=
     interiorIntoDouble I H il (isEmbedding_double_inl I H)
   have hjOpenEmbed : IsOpenEmbedding j := by

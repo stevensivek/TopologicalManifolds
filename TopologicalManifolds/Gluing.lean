@@ -99,6 +99,8 @@ noncomputable def glued.inr : (TopCat.of Y) ⟶ (glued A B φ) :=
 noncomputable def glued.zero : (TopCat.of A) ⟶ (glued A B φ) :=
   (inc_mk' A) ≫ (glued.inl A B φ)
 
+lemma glued.zero_def : glued.zero A B φ = (inc_mk' A) ≫ (glued.inl A B φ) := by rfl
+
 noncomputable def glued.desc {Z : TopCat} (h : C(X, Z)) (k : C(Y, Z))
     (w : CategoryStruct.comp (inc_mk' A) (TopCat.ofHom h)
        = CategoryStruct.comp (inc_homeo' A B φ) (TopCat.ofHom k) := by aesop_cat) :
@@ -170,9 +172,26 @@ theorem isClosedEmbedding_glued_inr (hA : IsClosed A) :
   exact TopCat.Pushout.inr_closed_embedding_of_closed_embedding_left
         (inc_mk' A) (inc_homeo' A B φ) (inclusion.isClosedEmbedding A hA)
 
+theorem isEmbedding_glued_zero : IsEmbedding (glued.zero A B φ) := by
+  apply IsEmbedding.comp (g := glued.inl A B φ)
+  · exact isEmbedding_glued_inl A B φ
+  · exact inclusion.isEmbedding A
+
+theorem isInducing_glued_zero : IsInducing (glued.zero A B φ) := by
+  exact (isEmbedding_glued_zero A B φ).isInducing
+
+theorem injective_glued_zero : Injective (glued.zero A B φ) := by
+  exact (isEmbedding_glued_zero A B φ).injective
+
+theorem isClosedEmbedding_glued_zero (hA : IsClosed A) (hB : IsClosed B) :
+    IsClosedEmbedding (glued.zero A B φ) := by
+  apply IsClosedEmbedding.comp (g := glued.inl A B φ)
+  · exact isClosedEmbedding_glued_inl A B φ hB
+  · exact inclusion.isClosedEmbedding A hA
+
 theorem glued_range_inl_intersect_inr :
     (range (glued.inl A B φ)) ∩ (range (glued.inr A B φ)) =
-    range ((inc_mk' A) ≫ (glued.inl A B φ)) := by
+     range (glued.zero A B φ) := by
   apply TopCat.Pushout.inl_mono_intersection_inl_inr (inc_mk' A) (inc_homeo' A B φ)
   exact (inclusion.isEmbedding A).injective
 
@@ -189,6 +208,7 @@ theorem glued_range_inl_intersect_inr' :
     (range (glued.inl A B φ)) ∩ (range (glued.inr A B φ)) =
      (glued.inl A B φ) '' A := by
   obtain h := glued_range_inl_intersect_inr A B φ
+  rw [glued.zero_def A B φ] at h
   simp only [TopCat.hom_comp, ContinuousMap.coe_comp, range_comp] at h
   rwa [show range (inc_mk' A) = A by exact range_inclusion_mk A] at h
 
@@ -261,22 +281,25 @@ theorem glued_image_inr_complement :
   rw [← compl_compl (ir '' Bᶜ)]
   exact congrArg compl (Eq.symm this)
 
-theorem isEmbedding_glued_zero : IsEmbedding (glued.zero A B φ) := by
-  apply IsEmbedding.comp (g := glued.inl A B φ)
-  · exact isEmbedding_glued_inl A B φ
-  · exact inclusion.isEmbedding A
-
-theorem isInducing_glued_zero : IsInducing (glued.zero A B φ) := by
-  exact (isEmbedding_glued_zero A B φ).isInducing
-
-theorem injective_glued_zero : Injective (glued.zero A B φ) := by
-  exact (isEmbedding_glued_zero A B φ).injective
-
-theorem isClosedEmbedding_glued_zero (hA : IsClosed A) (hB : IsClosed B) :
-    IsClosedEmbedding (glued.zero A B φ) := by
-  apply IsClosedEmbedding.comp (g := glued.inl A B φ)
-  · exact isClosedEmbedding_glued_inl A B φ hB
-  · exact inclusion.isClosedEmbedding A hA
+theorem glued_trichotomy (x : glued A B φ) :
+    x ∈ (glued.inl A B φ) '' Aᶜ ∨ x ∈ (glued.inr A B φ) '' Bᶜ ∨
+    x ∈ range (glued.zero A B φ) := by
+  have hx : x ∈ range (glued.inl A B φ) ∨ x ∈ range (glued.inr A B φ) := by
+    rw [← mem_union, jointly_surjective_glued]
+    trivial
+  rw [← image_univ, ← compl_union_self A, image_union, mem_union,
+      ← image_univ, ← compl_union_self B, image_union, mem_union,
+      or_assoc, ← glued_inl_locus_eq_inr_locus A B φ] at hx
+  nth_rewrite 3 [or_comm] at hx
+  simp only [or_self_left] at hx
+  rcases hx with (h | h | h)
+  · left; exact h
+  · right; right
+    rw [glued.zero_def A B φ]
+    have : x ∈ (glued.inl A B φ) '' range (inc_mk' A) := by
+      rwa [show range (inc_mk' A) = A by exact range_inclusion_mk A]
+    simpa only [TopCat.hom_comp, ContinuousMap.coe_comp, range_comp]
+  · right; left; exact h
 
 theorem compact_glued_iff_compact (hA : IsClosed A) (hB : IsClosed B) :
     CompactSpace (glued A B φ) ↔ CompactSpace X ∧ CompactSpace Y := by
@@ -365,6 +388,8 @@ noncomputable def double.inr : (TopCat.of M) ⟶ double I M := (double_cocone I 
 noncomputable def double.zero : (TopCat.of (I.boundary M)) ⟶ double I M :=
   (inc_mk' (I.boundary M)) ≫ (double.inl I M)
 
+lemma double.zero_def : double.zero I M = (inc_mk' (I.boundary M)) ≫ (double.inl I M) := by rfl
+
 noncomputable def double.desc {X : TopCat} (h k : C(M, X))
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
        = CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
@@ -437,6 +462,21 @@ theorem isInducing_double_inr : IsInducing (double.inr I M) := by
 theorem injective_double_inr : Injective (double.inr I M) := by
   exact injective_glued_inr (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
 
+theorem isClosedEmbedding_double_zero [HasInvarianceOfDomain E] :
+    IsClosedEmbedding (double.zero I M) := by
+  exact isClosedEmbedding_glued_zero
+    (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+    (I.isClosed_boundary M) (I.isClosed_boundary M)
+
+theorem isEmbedding_double_zero : IsEmbedding (double.zero I M) := by
+  exact isEmbedding_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem isInducing_double_zero : IsInducing (double.zero I M) := by
+  exact isInducing_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem injective_double_zero : Injective (double.zero I M) := by
+  exact injective_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
 theorem double_range_inl_intersect_inr :
     (range (double.inl I M)) ∩ (range (double.inr I M)) =
      range ((bdry_inc' I M) ≫ (double.inl I M)) := by
@@ -477,20 +517,11 @@ theorem isOpen_double_inr_interior [HasInvarianceOfDomain E] :
   apply isOpen_compl_iff.mpr
   exact (isClosedEmbedding_double_inl I M).isClosed_range
 
-theorem isClosedEmbedding_double_zero [HasInvarianceOfDomain E] :
-    IsClosedEmbedding (double.zero I M) := by
-  exact isClosedEmbedding_glued_zero
-    (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
-    (I.isClosed_boundary M) (I.isClosed_boundary M)
-
-theorem isEmbedding_double_zero : IsEmbedding (double.zero I M) := by
-  exact isEmbedding_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
-
-theorem isInducing_double_zero : IsInducing (double.zero I M) := by
-  exact isInducing_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
-
-theorem injective_double_zero : Injective (double.zero I M) := by
-  exact injective_glued_zero (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+theorem double_trichotomy (x : double I M) :
+    x ∈ (double.inl I M) '' (I.interior M) ∨ x ∈ (double.inr I M) '' (I.interior M) ∨
+    x ∈ range (double.zero I M) := by
+  rw [← compl_boundary]
+  exact glued_trichotomy (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M)) x
 
 theorem desc_surjective_double {X : TopCat} (h k : C(M, X))
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
@@ -736,8 +767,7 @@ theorem connected_of_connected_double [HasInvarianceOfDomain E] :
       exact this hsV_Nonempty
     | inr h =>
       rw [h, compl_univ] at hsUsVc
-      have : ¬ Nonempty sU := by exact not_nonempty_iff_eq_empty'.mpr hsUsVc
-      exact this hsU_Nonempty
+      exact (not_nonempty_iff_eq_empty'.mpr hsUsVc) hsU_Nonempty
 
 noncomputable def double_homeomorph [HasInvarianceOfDomain E] {X Y : Type u}
     [TopologicalSpace X] [TopologicalSpace Y] [ChartedSpace H X] [ChartedSpace H Y]
@@ -819,12 +849,37 @@ def tail_inclusion : C(I.boundary M, (I.boundary M) × Iic (0:ℝ)) :=
 def tail_inc' : (TopCat.of (I.boundary M)) ⟶ (TopCat.of ((I.boundary M) × Iic (0:ℝ))) :=
   TopCat.ofHom (tail_inclusion I M)
 
+private def tail_bdry : Set ((I.boundary M) × Iic (0:ℝ)) :=
+  ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩})
+
+private lemma isClosed_tail_bdry : IsClosed (tail_bdry I M) := by
+  apply IsClosed.prod isClosed_univ isClosed_singleton
+
+private lemma compl_tail_bdry :
+    (tail_bdry I M)ᶜ = ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩}ᶜ) := by
+  simp only [tail_bdry]
+  ext x
+  simp_all only [mem_compl_iff, mem_prod, mem_univ, mem_singleton_iff, true_and]
+
+private def completion_gluing : Homeomorph (I.boundary M) (tail_bdry I M) where
+  toFun := fun x ↦ ⟨(x,⟨0, right_mem_Iic⟩), by exact mk_mem_prod trivial rfl⟩
+  invFun := fun y ↦ y.1.1
+  left_inv := by intro x; simp only
+  right_inv := by
+    intro ⟨⟨x1,⟨x2,x2prop⟩⟩, xprop⟩
+    simp only [tail_bdry] at xprop
+    simp_all only
+    simp_all only [Subtype.mk.injEq, Prod.mk.injEq, true_and]
+    simp_all only [mem_prod, mem_univ, mem_singleton_iff, Subtype.mk.injEq, true_and]
+  continuous_toFun := by fun_prop
+  continuous_invFun := by fun_prop
+
 private lemma range_tail_inclusion :
-    range (tail_inclusion I M) = (@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩} := by
+    range (tail_inclusion I M) = tail_bdry I M := by
   apply Subset.antisymm_iff.mpr
   constructor <;> intro x ⟨y, hy⟩
   · simp [tail_inclusion] at hy
-    simp only [mem_prod, mem_univ, mem_singleton_iff, true_and]
+    simp only [tail_bdry, mem_prod, mem_univ, mem_singleton_iff, true_and]
     rw [← hy]
   · simp [tail_inclusion]
     use x.1
@@ -844,10 +899,10 @@ private theorem tail_inclusion.isClosedEmbedding :
   constructor
   · exact tail_inclusion.isEmbedding I M
   · rw [range_tail_inclusion I M]
-    apply IsClosed.prod isClosed_univ isClosed_singleton
+    exact isClosed_tail_bdry I M
 
 noncomputable def completion_cocone : PushoutCocone (bdry_inc' I M) (tail_inc' I M) :=
-  pushout.cocone (bdry_inc' I M) (tail_inc' I M)
+  glued_cocone (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 noncomputable def completion : TopCat := (completion_cocone I M).pt
 
@@ -865,108 +920,131 @@ noncomputable def completion.desc {X : TopCat}
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
        = CategoryStruct.comp (tail_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
     (completion I M) ⟶ X :=
-  pushout.desc (TopCat.ofHom h) (TopCat.ofHom k) w
+  glued.desc (I.boundary M) (tail_bdry I M) (completion_gluing I M) h k w
 
 theorem completion.w :
     CategoryStruct.comp (bdry_inc' I M) (completion.inl I M) =
     CategoryStruct.comp (tail_inc' I M) (completion.inr I M) := by
-  exact (IsPushout.of_hasPushout (bdry_inc' I M) (tail_inc' I M)).w
+  exact glued.w (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem completion_isOpen_iff (U : Set (completion I M)) :
     IsOpen U ↔ IsOpen ((completion.inl I M) ⁻¹' U) ∧ IsOpen ((completion.inr I M) ⁻¹' U) := by
-  exact TopCat.Pushout.glued_isOpen_iff (bdry_inc' I M) (tail_inc' I M) U
+  exact glued_isOpen_iff (I.boundary M) (tail_bdry I M) (completion_gluing I M) U
 
-theorem glued_isClosed_iff (U : Set (completion I M)) :
+theorem completion_isClosed_iff (U : Set (completion I M)) :
     IsClosed U ↔   IsClosed ((completion.inl I M) ⁻¹' U)
                  ∧ IsClosed ((completion.inr I M) ⁻¹' U) := by
-  exact TopCat.Pushout.glued_isClosed_iff (bdry_inc' I M) (tail_inc' I M) U
+  exact glued_isClosed_iff (I.boundary M) (tail_bdry I M) (completion_gluing I M) U
 
 theorem T2_completion_of_T2 [HasInvarianceOfDomain E] :
     T2Space M → T2Space (completion I M) := by
   intro hM
   have hTail : T2Space ((I.boundary M) × (Iic (0 : ℝ))) := by exact Prod.t2Space
-  exact TopCat.Pushout.T2_of_T2_closed_embedding (bdry_inc' I M) (tail_inc' I M)
-        hM hTail (inclusion.isClosedEmbedding (I.boundary M) (I.isClosed_boundary M))
-        (tail_inclusion.isClosedEmbedding I M)
+  exact T2_glued_of_T2 (I.boundary M) (tail_bdry I M) (completion_gluing I M) hM hTail
+        (I.isClosed_boundary M) (isClosed_tail_bdry I M)
 
 theorem jointly_surjective_completion :
     range (completion.inl I M) ∪ range (completion.inr I M) = @univ (completion I M) := by
-  exact TopCat.Pushout.glued_surjective' (bdry_inc' I M) (tail_inc' I M)
+  exact jointly_surjective_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem isEmbedding_completion_inl : IsEmbedding (completion.inl I M) := by
-  exact TopCat.Pushout.inl_embedding_of_embedding_right
-        (bdry_inc' I M) (tail_inc' I M) (tail_inclusion.isEmbedding I M)
+  exact isEmbedding_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem isClosedEmbedding_completion_inl :
     IsClosedEmbedding (completion.inl I M) := by
-  exact TopCat.Pushout.inl_closed_embedding_of_closed_embedding_right
-        (bdry_inc' I M) (tail_inc' I M) (tail_inclusion.isClosedEmbedding I M)
+  exact isClosedEmbedding_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+        (isClosed_tail_bdry I M)
 
 theorem isInducing_completion_inl : IsInducing (completion.inl I M) := by
-  exact ((isEmbedding_iff (completion.inl I M)).mp
-         (isEmbedding_completion_inl I M)).1
+  exact isInducing_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem injective_completion_inl : Injective (completion.inl I M) := by
-  exact ((isEmbedding_iff (completion.inl I M)).mp
-         (isEmbedding_completion_inl I M)).2
+  exact injective_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem isEmbedding_completion_inr : IsEmbedding (completion.inr I M) := by
-  exact TopCat.Pushout.inr_embedding_of_embedding_left
-        (bdry_inc' I M) (tail_inc' I M) (inclusion.isEmbedding (I.boundary M))
+  exact isEmbedding_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem isInducing_completion_inr : IsInducing (completion.inr I M) := by
-  exact ((isEmbedding_iff (completion.inr I M)).mp
-         (isEmbedding_completion_inr I M)).1
+  exact isInducing_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem isClosedEmbedding_completion_inr [HasInvarianceOfDomain E] :
     IsClosedEmbedding (completion.inr I M) := by
-  exact TopCat.Pushout.inr_closed_embedding_of_closed_embedding_left
-        (bdry_inc' I M) (tail_inc' I M)
-        (inclusion.isClosedEmbedding (I.boundary M) (I.isClosed_boundary M))
+  exact isClosedEmbedding_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+        (I.isClosed_boundary M)
 
 theorem injective_completion_inr : Injective (completion.inr I M) := by
-  exact ((isEmbedding_iff (completion.inr I M)).mp
-         (isEmbedding_completion_inr I M)).2
+   exact injective_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+theorem isEmbedding_completion_zero : IsEmbedding (completion.zero I M) := by
+  exact isEmbedding_glued_zero (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+theorem isClosedEmbedding_completion_zero [HasInvarianceOfDomain E] :
+    IsClosedEmbedding (completion.zero I M) := by
+  exact isClosedEmbedding_glued_zero (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+        (I.isClosed_boundary M) (isClosed_tail_bdry I M)
+
+theorem isInducing_completion_zero : IsInducing (completion.zero I M) := by
+  exact isInducing_glued_zero (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+theorem injective_completion_zero : Injective (completion.zero I M) := by
+  exact injective_glued_zero (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem completion_range_inl_intersect_inr :
     (range (completion.inl I M)) ∩ (range (completion.inr I M)) =
     range ((bdry_inc' I M) ≫ (completion.inl I M)) := by
-  apply TopCat.Pushout.inl_mono_intersection_inl_inr (bdry_inc' I M) (tail_inc' I M)
-  exact inclusion.injective (I.boundary M)
+  exact glued_range_inl_intersect_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+lemma completion_inl_locus_eq_inr_locus :
+    (completion.inl I M) '' (I.boundary M) =
+    (completion.inr I M) '' (((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩})) := by
+  exact glued_inl_locus_eq_inr_locus (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
 theorem completion_range_inl_intersect_inr' :
     (range (completion.inl I M)) ∩ (range (completion.inr I M)) =
      (completion.inl I M) '' (I.boundary M) := by
-  obtain h := completion_range_inl_intersect_inr I M
-  simp only [TopCat.hom_comp, ContinuousMap.coe_comp, range_comp] at h
-  rwa [show range (bdry_inc' I M) = I.boundary M by exact range_bdry_inc' I M] at h
+  exact glued_range_inl_intersect_inr' (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
-theorem isEmbedding_completion_zero : IsEmbedding (completion.zero I M) := by
-  apply IsEmbedding.comp (g := completion.inl I M)
-  · exact isEmbedding_completion_inl I M
-  · exact inclusion.isEmbedding (I.boundary M)
+theorem completion_range_inl_intersect_inr'' :
+    (range (completion.inl I M)) ∩ (range (completion.inr I M)) =
+    (completion.inr I M) '' ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩}) := by
+  exact glued_range_inl_intersect_inr'' (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
-theorem isClosedEmbedding_completion_zero [HasInvarianceOfDomain E] :
-    IsClosedEmbedding (completion.zero I M) := by
-  apply IsClosedEmbedding.comp (g := completion.inl I M)
-  · exact isClosedEmbedding_completion_inl I M
-  · exact inclusion.isClosedEmbedding (I.boundary M) (I.isClosed_boundary M)
+theorem completion_image_inl_interior :
+    (completion.inl I M) '' (I.interior M) = (range (completion.inr I M))ᶜ := by
+  rw [← compl_boundary]
+  exact glued_image_inl_complement (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
-theorem isInducing_completion_zero : IsInducing (completion.zero I M) := by
-  exact ((isEmbedding_iff (completion.zero I M)).mp
-         (isEmbedding_completion_zero I M)).1
+theorem isOpen_completion_inl_interior [HasInvarianceOfDomain E] :
+    IsOpen ((completion.inl I M) '' (I.interior M)) := by
+  rw [completion_image_inl_interior]
+  apply isOpen_compl_iff.mpr
+  exact (isClosedEmbedding_completion_inr I M).isClosed_range
 
-theorem injective_completion_zero : Injective (completion.zero I M) := by
-  exact ((isEmbedding_iff (completion.zero I M)).mp
-         (isEmbedding_completion_zero I M)).2
+theorem completion_image_inr_interior :
+    (completion.inr I M) '' ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩}ᶜ) =
+    (range (completion.inl I M))ᶜ := by
+  rw [← compl_tail_bdry I M]
+  exact glued_image_inr_complement (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+theorem isOpen_completion_inr_interior :
+    IsOpen ((completion.inr I M) '' ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩}ᶜ)) := by
+  rw [completion_image_inr_interior]
+  apply isOpen_compl_iff.mpr
+  exact (isClosedEmbedding_completion_inl I M).isClosed_range
+
+theorem completion_trichotomy (x : completion I M) :
+    x ∈ (completion.inl I M) '' (I.interior M) ∨
+    x ∈ (completion.inr I M) '' ((@univ (I.boundary M)) ×ˢ {⟨0, right_mem_Iic⟩}ᶜ) ∨
+    x ∈ range (completion.zero I M) := by
+  rw [← compl_boundary, ← compl_tail_bdry I M]
+  exact glued_trichotomy (I.boundary M) (tail_bdry I M) (completion_gluing I M) x
 
 theorem desc_surjective_completion {X : TopCat}
     (h : C(M, X)) (k : C((I.boundary M) × (Iic (0 : ℝ)), X))
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
        = CategoryStruct.comp (tail_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
     (range h) ∪ (range k) = @univ X → Surjective (completion.desc I M h k w) := by
-  exact TopCat.Pushout.desc_surjective_of_jointly_surjective
-        (bdry_inc' I M) (tail_inc' I M) (TopCat.ofHom h) (TopCat.ofHom k) w
+  exact desc_surjective_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M) h k w
 
 theorem inl_desc_completion {X : TopCat}
     (h : C(M, X)) (k : C((I.boundary M) × (Iic (0 : ℝ)), X))
@@ -974,7 +1052,7 @@ theorem inl_desc_completion {X : TopCat}
        = CategoryStruct.comp (tail_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
     CategoryStruct.comp (completion.inl I M) (completion.desc I M h k w)
     = TopCat.ofHom h := by
-  exact pushout.inl_desc (TopCat.ofHom h) (TopCat.ofHom k) w
+  exact inl_desc_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M) h k w
 
 theorem inr_desc_completion {X : TopCat}
     (h : C(M, X)) (k : C((I.boundary M) × (Iic (0 : ℝ)), X))
@@ -982,7 +1060,7 @@ theorem inr_desc_completion {X : TopCat}
        = CategoryStruct.comp (tail_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
     CategoryStruct.comp (completion.inr I M) (completion.desc I M h k w)
     = TopCat.ofHom k := by
-  exact pushout.inr_desc (TopCat.ofHom h) (TopCat.ofHom k) w
+  exact inr_desc_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M) h k w
 
 theorem desc_injective_completion {X : TopCat}
     (h : C(M, X)) (k : C((I.boundary M) × (Iic (0 : ℝ)), X))
@@ -992,19 +1070,15 @@ theorem desc_injective_completion {X : TopCat}
     (hBoundary : ∀ y : M, ∀ z : (I.boundary M) × (Iic (0 : ℝ)),
                 (h y = k z → y ∈ I.boundary M)) :
     Injective (completion.desc I M h k w) := by
-  simp_rw [← range_inclusion_mk (I.boundary M)] at hBoundary
-  exact TopCat.Pushout.desc_injective (bdry_inc' I M) (tail_inc' I M)
-        (TopCat.ofHom h) (TopCat.ofHom k) w
-        (inclusion.injective (I.boundary M)) (tail_inclusion.injective I M)
-        hInjh hInjk hBoundary
+  exact desc_injective_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+        h k w hInjh hInjk hBoundary
 
-theorem desc_isClosedMap_glued {X : TopCat}
+theorem desc_isClosedMap_completion {X : TopCat}
     (h : C(M, X)) (k : C((I.boundary M) × (Iic (0 : ℝ)), X))
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
        = CategoryStruct.comp (tail_inc' I M) (TopCat.ofHom k) := by aesop_cat) :
     IsClosedMap h → IsClosedMap k → IsClosedMap (completion.desc I M h k w) := by
-  exact TopCat.Pushout.desc_isClosedMap (Ω := X)
-        (bdry_inc' I M) (tail_inc' I M) (TopCat.ofHom h) (TopCat.ofHom k) w
+  exact desc_isClosedMap_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M) h k w
 
 theorem connected_completion_of_connected :
     ConnectedSpace M → ConnectedSpace (completion I M) := by
