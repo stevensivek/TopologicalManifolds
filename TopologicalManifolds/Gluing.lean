@@ -142,6 +142,9 @@ theorem jointly_surjective_glued :
     range (glued.inl A B φ) ∪ range (glued.inr A B φ) = @univ (glued A B φ) := by
   exact TopCat.Pushout.glued_surjective' (inc_mk' A) (inc_homeo' A B φ)
 
+theorem continuous_glued_inl : Continuous (glued.inl A B φ) := by
+  exact (ConcreteCategory.hom <| glued.inl A B φ).continuous
+
 theorem isEmbedding_glued_inl : IsEmbedding (glued.inl A B φ) := by
   exact TopCat.Pushout.inl_embedding_of_embedding_right
         (inc_mk' A) (inc_homeo' A B φ) (inc_homeo.isEmbedding A B φ)
@@ -157,6 +160,9 @@ theorem isClosedEmbedding_glued_inl (hB : IsClosed B) :
   exact TopCat.Pushout.inl_closed_embedding_of_closed_embedding_right
         (inc_mk' A) (inc_homeo' A B φ) (inc_homeo.isClosedEmbedding A B φ hB)
 
+theorem continuous_glued_inr : Continuous (glued.inr A B φ) := by
+  exact (ConcreteCategory.hom <| glued.inr A B φ).continuous
+
 theorem isEmbedding_glued_inr : IsEmbedding (glued.inr A B φ) := by
   exact TopCat.Pushout.inr_embedding_of_embedding_left
         (inc_mk' A) (inc_homeo' A B φ) (inclusion.isEmbedding A)
@@ -171,6 +177,9 @@ theorem isClosedEmbedding_glued_inr (hA : IsClosed A) :
     IsClosedEmbedding (glued.inr A B φ) := by
   exact TopCat.Pushout.inr_closed_embedding_of_closed_embedding_left
         (inc_mk' A) (inc_homeo' A B φ) (inclusion.isClosedEmbedding A hA)
+
+theorem continuous_glued_zero : Continuous (glued.zero A B φ) := by
+  exact (ConcreteCategory.hom <| glued.zero A B φ).continuous
 
 theorem isEmbedding_glued_zero : IsEmbedding (glued.zero A B φ) := by
   apply IsEmbedding.comp (g := glued.inl A B φ)
@@ -349,6 +358,72 @@ theorem desc_isClosedMap_glued {Z : TopCat} (h : C(X, Z)) (k : C(Y, Z))
   exact TopCat.Pushout.desc_isClosedMap (Ω := Z)
         (inc_mk' A) (inc_homeo' A B φ) (TopCat.ofHom h) (TopCat.ofHom k) w
 
+theorem glued_inl_preimage_range_inr :
+    (glued.inl A B φ) ⁻¹' (range (glued.inr A B φ)) = A := by
+  ext x
+  constructor <;> intro hx
+  · apply mem_preimage.mp at hx
+    have : (glued.inl A B φ) x ∈ range (glued.inl A B φ) ∩ range (glued.inr A B φ) := by
+      exact mem_inter (mem_range_self x) hx
+    rw [glued_range_inl_intersect_inr' A B φ] at this
+    obtain ⟨y,hy,hyx⟩ := this
+    apply injective_glued_inl A B φ at hyx
+    rwa [hyx] at hy
+  · apply mem_preimage.mpr
+    have : (glued.inl A B φ) x ∈ (glued.inl A B φ) '' A := by
+      exact mem_image_of_mem (glued.inl A B φ) hx
+    rw [← glued_range_inl_intersect_inr' A B φ] at this
+    exact mem_of_mem_inter_right this
+
+theorem glued_inr_preimage_range_inl :
+    (glued.inr A B φ) ⁻¹' (range (glued.inl A B φ)) = B := by
+  ext x
+  constructor <;> intro hx
+  · apply mem_preimage.mp at hx
+    have : (glued.inr A B φ) x ∈ range (glued.inl A B φ) ∩ range (glued.inr A B φ) := by
+      exact mem_inter hx (mem_range_self x)
+    rw [glued_range_inl_intersect_inr'' A B φ] at this
+    obtain ⟨y,hy,hyx⟩ := this
+    apply injective_glued_inr A B φ at hyx
+    rwa [hyx] at hy
+  · apply mem_preimage.mpr
+    have : (glued.inr A B φ) x ∈ (glued.inr A B φ) '' B := by
+      exact mem_image_of_mem (glued.inr A B φ) hx
+    rw [← glued_range_inl_intersect_inr'' A B φ] at this
+    exact mem_of_mem_inter_left this
+
+theorem glued_inl_preimage_inr_complement :
+    (glued.inl A B φ) ⁻¹' ((glued.inr A B φ) '' Bᶜ) = ∅ := by
+  apply subset_empty_iff.mp
+  intro x hx
+  simp only [mem_preimage, mem_image] at hx
+  obtain ⟨y,hy,hyx⟩ := hx
+  have : (glued.inr A B φ) y ∈ (glued.inr A B φ) '' B := by
+    rw [← glued_range_inl_intersect_inr'' A B φ]
+    simp only [mem_inter_iff, mem_range, exists_apply_eq_apply, and_true]
+    use x
+    exact Eq.symm hyx
+  obtain ⟨y', hyB, hy'⟩ := this
+  have : y' = y := by exact (injective_glued_inr A B φ) hy'
+  rw [(injective_glued_inr A B φ) hy'] at hyB
+  exact hy hyB
+
+theorem glued_inr_preimage_inl_complement :
+    (glued.inr A B φ) ⁻¹' ((glued.inl A B φ) '' Aᶜ) = ∅ := by
+  apply subset_empty_iff.mp
+  intro x hx
+  simp only [mem_preimage, mem_image] at hx
+  obtain ⟨y,hy,hyx⟩ := hx
+  have : (glued.inl A B φ) y ∈ (glued.inl A B φ) '' A := by
+    rw [← glued_range_inl_intersect_inr' A B φ]
+    simp only [mem_inter_iff, mem_range, exists_apply_eq_apply, true_and]
+    use x
+    exact Eq.symm hyx
+  obtain ⟨y', hyB, hy'⟩ := this
+  have : y' = y := by exact (injective_glued_inl A B φ) hy'
+  rw [(injective_glued_inl A B φ) hy'] at hyB
+  exact hy hyB
+
 theorem nonempty_iff_nonempty_glued :
     (Nonempty X) ∨ (Nonempty Y) ↔ Nonempty (glued A B φ) := by
   have hrangeX : Nonempty X ↔ (range (glued.inl A B φ)).Nonempty := by
@@ -432,6 +507,9 @@ theorem jointly_surjective_double :
     range (double.inl I M) ∪ range (double.inr I M) = @univ (double I M) := by
   exact jointly_surjective_glued (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
 
+theorem continuous_double_inl : Continuous (double.inl I M) := by
+  exact (ConcreteCategory.hom <| double.inl I M).continuous
+
 theorem isClosedEmbedding_double_inl [HasInvarianceOfDomain E] :
     IsClosedEmbedding (double.inl I M) := by
   exact isClosedEmbedding_glued_inl
@@ -447,6 +525,9 @@ theorem isInducing_double_inl : IsInducing (double.inl I M) := by
 theorem injective_double_inl : Injective (double.inl I M) := by
   exact injective_glued_inl (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
 
+theorem continuous_double_inr : Continuous (double.inr I M) := by
+  exact (ConcreteCategory.hom <| double.inr I M).continuous
+
 theorem isClosedEmbedding_double_inr [HasInvarianceOfDomain E] :
     IsClosedEmbedding (double.inr I M) := by
   exact isClosedEmbedding_glued_inr
@@ -461,6 +542,9 @@ theorem isInducing_double_inr : IsInducing (double.inr I M) := by
 
 theorem injective_double_inr : Injective (double.inr I M) := by
   exact injective_glued_inr (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem continuous_double_zero : Continuous (double.zero I M) := by
+  exact (ConcreteCategory.hom <| double.zero I M).continuous
 
 theorem isClosedEmbedding_double_zero [HasInvarianceOfDomain E] :
     IsClosedEmbedding (double.zero I M) := by
@@ -541,6 +625,54 @@ theorem inr_desc_double {X : TopCat} (h k : C(M, X))
     CategoryStruct.comp (double.inr I M) (double.desc I M h k w) = TopCat.ofHom k := by
   exact inr_desc_glued (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M)) h k w
 
+noncomputable def double_swap_morphism : double I M ⟶ double I M :=
+  double.desc I M (TopCat.Hom.hom (double.inr I M))
+                  (TopCat.Hom.hom (double.inl I M))
+                  (Eq.symm (double.w I M))
+
+theorem double_inl_swap_eq_inr :
+   (double.inl I M) ≫ (double_swap_morphism I M) = double.inr I M := by
+  exact inl_desc_double I M (TopCat.Hom.hom (double.inr I M))
+    (TopCat.Hom.hom (double.inl I M)) (Eq.symm (double.w I M))
+
+theorem double_inr_swap_eq_inl :
+   (double.inr I M) ≫ (double_swap_morphism I M) = double.inl I M := by
+  exact inr_desc_double I M (TopCat.Hom.hom (double.inr I M))
+    (TopCat.Hom.hom (double.inl I M)) (Eq.symm (double.w I M))
+
+theorem double_swap_involution :
+    (double_swap_morphism I M) ≫ (double_swap_morphism I M) = 𝟙 (double I M) := by
+  ext x
+  simp only [TopCat.hom_comp, ContinuousMap.comp_apply,
+             TopCat.hom_id, ContinuousMap.id_apply]
+  have : x ∈ univ := by trivial
+  rw [← jointly_surjective_double] at this
+  simp only [mem_union, mem_range] at this
+  rcases this with (h | h) <;> (
+    obtain ⟨y,hy⟩ := h
+    rw [← hy]
+    nth_rewrite 2 [← ContinuousMap.comp_apply]
+    rw [← TopCat.hom_comp]
+  )
+  · rw [double_inl_swap_eq_inr, ← ContinuousMap.comp_apply,
+        ← TopCat.hom_comp, double_inr_swap_eq_inl]
+  · rw [double_inr_swap_eq_inl, ← ContinuousMap.comp_apply,
+        ← TopCat.hom_comp, double_inl_swap_eq_inr]
+
+noncomputable def double_swap : double I M ≃ₜ double I M where
+  toFun := double_swap_morphism I M
+  invFun := double_swap_morphism I M
+  left_inv := by
+    exact fun x ↦ congrFun
+      (congrArg (DFunLike.coe ∘ TopCat.Hom.hom) (double_swap_involution I M)) x
+  right_inv := by
+    exact fun x ↦ congrFun
+      (congrArg (DFunLike.coe ∘ TopCat.Hom.hom) (double_swap_involution I M)) x
+  continuous_toFun := by
+    exact (TopCat.Hom.hom (double_swap_morphism I M)).continuous
+  continuous_invFun := by
+    exact (TopCat.Hom.hom (double_swap_morphism I M)).continuous
+
 theorem desc_injective_double {X : TopCat} (h k : C(M, X))
     (w : CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom h)
        = CategoryStruct.comp (bdry_inc' I M) (TopCat.ofHom k) := by aesop_cat)
@@ -557,7 +689,7 @@ theorem desc_isClosedMap_double {X : TopCat} (h k : C(M, X))
   exact desc_isClosedMap_glued (I.boundary M) (I.boundary M)
         (Homeomorph.refl (I.boundary M)) h k w
 
-theorem inl_eq_inr {a b : M} (hab : (double.inl I M) a = (double.inr I M) b) :
+theorem double_inl_eq_inr {a b : M} (hab : (double.inl I M) a = (double.inr I M) b) :
     a ∈ I.boundary M ∧ a = b := by
   let x := (double.inl I M) a
   have : x ∈ range ((bdry_inc' I M) ≫ (double.inl I M)) := by
@@ -578,13 +710,135 @@ theorem inl_eq_inr {a b : M} (hab : (double.inl I M) a = (double.inr I M) b) :
   · rw [(injective_double_inr I M) hy'] at hay
     exact Eq.symm hay
 
+theorem double_inl_preimage_range_inr :
+    (double.inl I M) ⁻¹' (range (double.inr I M)) = I.boundary M := by
+  exact glued_inl_preimage_range_inr
+        (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem double_inr_preimage_range_inl :
+    (double.inr I M) ⁻¹' (range (double.inl I M)) = I.boundary M := by
+  exact glued_inr_preimage_range_inl
+        (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem double_inl_preimage_inr_interior :
+    (double.inl I M) ⁻¹' ((double.inr I M) '' (I.interior M)) = ∅ := by
+  rw [← compl_boundary]
+  exact glued_inl_preimage_inr_complement
+        (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem double_inr_preimage_inl_interior :
+    (double.inr I M) ⁻¹' ((double.inl I M) '' (I.interior M)) = ∅ := by
+  rw [← compl_boundary]
+  exact glued_inr_preimage_inl_complement
+        (I.boundary M) (I.boundary M) (Homeomorph.refl (I.boundary M))
+
+theorem double_inl_eq_inr_of_boundary {a : M} (ha : a ∈ I.boundary M) :
+    (double.inl I M) a = (double.inr I M) a := by
+  rw [show a = (bdry_inc' I M) ⟨a,ha⟩ by rfl,
+      ← ContinuousMap.comp_apply, ← ContinuousMap.comp_apply]
+  apply congrFun
+  exact congrArg DFunLike.coe <| congrArg ConcreteCategory.hom <| double.w I M
+
+theorem double_interior_range_inl [HasInvarianceOfDomain E] :
+    interior (range (double.inl I M)) = (double.inl I M) '' (I.interior M) := by
+  apply Subset.antisymm_iff.mpr
+  constructor <;> intro x hx
+  · obtain ⟨U, hURange, hUOpen, hU⟩ := mem_interior.mp hx
+    by_contra h
+    have : x ∈ (double.inl I M) '' univ := by
+      rw [image_univ]
+      exact hURange hU
+    have : x ∈ (double.inl I M) '' (I.boundary M) := by
+      rw [← compl_interior]
+      rw [← union_compl_self (I.interior M), image_union, mem_union] at this
+      simp only [h, false_or] at this
+      exact this
+    obtain ⟨y, hyBdry, hyx⟩ := this
+    rw [double_inl_eq_inr_of_boundary I M hyBdry] at hyx
+    let V : Set M := (double.inr I M) ⁻¹' U
+    have hyV : y ∈ V := by
+      exact show (double.inr I M) y ∈ U by rwa [hyx]
+    have : V ⊆ interior (closure (I.boundary M)) := by
+      rw [closure_eq_iff_isClosed.mpr <| isClosed_boundary I M]
+      apply (IsOpen.subset_interior_iff <| hUOpen.preimage (continuous_double_inr I M)).mpr
+      rw [← double_inr_preimage_range_inl I M]
+      exact fun _ ht ↦ hURange ht
+    rw [isNowhereDense_boundary I M] at this
+    exact this hyV
+  · apply mem_interior.mpr
+    use (double.inl I M) '' (I.interior M)
+    exact ⟨image_subset_range (double.inl I M) (I.interior M),
+           isOpen_double_inl_interior I M, hx⟩
+
+theorem double_frontier_range_inl [HasInvarianceOfDomain E] :
+    frontier (range (double.inl I M)) = (double.inl I M) '' (I.boundary M) := by
+  rw [← closure_diff_interior, double_interior_range_inl,
+        closure_eq_iff_isClosed.mpr (isClosedEmbedding_double_inl I M).isClosed_range,
+      ← image_univ, ← image_diff (injective_double_inl I M),
+      ← compl_eq_univ_diff, I.compl_interior]
+
+theorem double_interior_range_inr [HasInvarianceOfDomain E] :
+    interior (range (double.inr I M)) = (double.inr I M) '' (I.interior M) := by
+  have hswap_inl_inr : (double_swap I M) ∘ (double.inl I M) = double.inr I M := by
+    exact congrArg (DFunLike.coe ∘ ConcreteCategory.hom) <| double_inl_swap_eq_inr I M
+  have : (double_swap I M) '' (range (double.inl I M)) = range (double.inr I M) := by
+    rw [← image_univ, ← image_univ, ← image_comp]
+    exact congrFun (congrArg image hswap_inl_inr) univ
+  rw [← this, ← hswap_inl_inr, image_comp,
+      ← (double_swap I M).image_interior (range (double.inl I M))]
+  exact congrArg (image (double_swap I M)) <| double_interior_range_inl I M
+
+theorem double_frontier_range_inr [HasInvarianceOfDomain E] :
+    frontier (range (double.inr I M)) = (double.inr I M) '' (I.boundary M) := by
+  rw [← closure_diff_interior, double_interior_range_inr,
+        closure_eq_iff_isClosed.mpr (isClosedEmbedding_double_inr I M).isClosed_range,
+      ← image_univ, ← image_diff (injective_double_inr I M),
+      ← compl_eq_univ_diff, I.compl_interior]
+
+noncomputable def double_inverse : (double I M) ⟶ (TopCat.of M) :=
+  double.desc I M (Homeomorph.refl M) (Homeomorph.refl M) rfl
+
+theorem double_left_inv_inl : LeftInverse (double_inverse I M) (double.inl I M) := by
+  intro x
+  simp only [double_inverse]
+  rw [← ContinuousMap.comp_apply, ← TopCat.hom_comp,
+      inl_desc_double I M (X := TopCat.of M) (Homeomorph.refl M) (Homeomorph.refl M) rfl]
+  rfl
+
+theorem double_left_inv_inr : LeftInverse (double_inverse I M) (double.inr I M) := by
+  intro x
+  simp only [double_inverse]
+  rw [← ContinuousMap.comp_apply, ← TopCat.hom_comp,
+      inr_desc_double I M (X := TopCat.of M) (Homeomorph.refl M) (Homeomorph.refl M) rfl]
+  rfl
+
+theorem double_unique_preimage (x : double I M) :
+    ∃! t : M, (double.inl I M) t = x ∨ (double.inr I M) t = x := by
+  have h : x ∈ univ := by trivial
+  rw [← jointly_surjective_double I M, mem_union, ← image_univ, ← image_univ] at h
+  rcases h with (hh|hh) <;>
+      ( obtain ⟨y,_,hy⟩ := hh
+        use y )
+  · constructor
+    · left; exact hy
+    · intro z hz; rw [← hy] at hz
+      cases hz with
+      | inl hh => exact (injective_double_inl I M) hh
+      | inr hh => exact Eq.symm (double_inl_eq_inr I M (Eq.symm hh)).2
+  · constructor
+    · right; exact hy
+    · intro z hz; rw [← hy] at hz
+      cases hz with
+      | inl hh => exact (double_inl_eq_inr I M hh).2
+      | inr hh => exact (injective_double_inr I M) hh
+
 theorem not_surjective_double_inl :
     Nonempty (I.interior M) → ¬ Surjective (double.inl I M) := by
   intro hInt
   obtain ⟨x,hx⟩ := by exact nonempty_subtype.mp hInt
   by_contra h
   obtain ⟨y, hy⟩ := by exact h ((double.inr I M) x)
-  obtain ⟨hBoundary, hyx⟩ := by exact inl_eq_inr I M hy
+  obtain ⟨hBoundary, hyx⟩ := by exact double_inl_eq_inr I M hy
   rw [hyx, ← ModelWithCorners.compl_interior] at hBoundary
   exact hBoundary hx
 
@@ -594,7 +848,7 @@ theorem not_surjective_double_inr :
   obtain ⟨x,hx⟩ := by exact nonempty_subtype.mp hInt
   by_contra h
   obtain ⟨y, hy⟩ := by exact h ((double.inl I M) x)
-  obtain ⟨hBoundary, hyx⟩ := by exact inl_eq_inr I M (Eq.symm hy)
+  obtain ⟨hBoundary, hyx⟩ := by exact double_inl_eq_inr I M (Eq.symm hy)
   rw [← ModelWithCorners.compl_interior] at hBoundary
   exact hBoundary hx
 
@@ -733,12 +987,12 @@ theorem connected_of_connected_double [HasInvarianceOfDomain E] :
           rw [(injective_double_inl I M) hyz] at hyU
           exact hUV <| nonempty_of_mem ⟨hyU, hzV⟩
         · obtain ⟨y,z,hyU,hzV,hyz⟩ := simultaneous_preimages h
-          obtain ⟨_, hzy⟩ := inl_eq_inr I M (Eq.symm hyz)
+          obtain ⟨_, hzy⟩ := double_inl_eq_inr I M (Eq.symm hyz)
           rw [hzy] at hzV
           exact hUV <| nonempty_of_mem ⟨hyU, hzV⟩
       · constructor <;> by_contra h
         · obtain ⟨y,z,hyU,hzV,hyz⟩ := simultaneous_preimages h
-          obtain ⟨_, hzy⟩ := inl_eq_inr I M hyz
+          obtain ⟨_, hzy⟩ := double_inl_eq_inr I M hyz
           rw [hzy] at hyU
           exact hUV <| nonempty_of_mem ⟨hyU, hzV⟩
         · obtain ⟨y,z,hyU,hzV,hyz⟩ := simultaneous_preimages h
@@ -818,7 +1072,7 @@ theorem isOpen_doubled {U : Set M} :
       apply union_subset
       · rw [preimage_image_eq U (injective_double_inl I M)]
       · rintro x ⟨y,hy,hrl⟩
-        rwa [← (inl_eq_inr I M (Eq.symm hrl)).2] at hy
+        rwa [← (double_inl_eq_inr I M (Eq.symm hrl)).2] at hy
     · exact fun ⦃a⦄ b ↦ subset_union_left ((subset_preimage_image inl U) b)
   have hInr : inr ⁻¹' V = U := by
     apply Subset.antisymm_iff.mpr
@@ -826,7 +1080,7 @@ theorem isOpen_doubled {U : Set M} :
     · rw [show V = (inl '' U) ∪ (inr '' U) by rfl, preimage_union]
       apply union_subset
       · rintro x ⟨y,hy,hrl⟩
-        rwa [(inl_eq_inr I M hrl).2] at hy
+        rwa [(double_inl_eq_inr I M hrl).2] at hy
       · rw [preimage_image_eq U (injective_double_inr I M)]
     · exact fun ⦃a⦄ b ↦ subset_union_right ((subset_preimage_image inr U) b)
   exact ⟨by rwa [hInl], by rwa [hInr]⟩
@@ -947,6 +1201,9 @@ theorem jointly_surjective_completion :
     range (completion.inl I M) ∪ range (completion.inr I M) = @univ (completion I M) := by
   exact jointly_surjective_glued (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
+theorem continuous_completion_inl : Continuous (completion.inl I M) := by
+  exact (ConcreteCategory.hom <| completion.inl I M).continuous
+
 theorem isEmbedding_completion_inl : IsEmbedding (completion.inl I M) := by
   exact isEmbedding_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
@@ -961,6 +1218,9 @@ theorem isInducing_completion_inl : IsInducing (completion.inl I M) := by
 theorem injective_completion_inl : Injective (completion.inl I M) := by
   exact injective_glued_inl (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
+theorem continuous_completion_inr : Continuous (completion.inr I M) := by
+  exact (ConcreteCategory.hom <| completion.inr I M).continuous
+
 theorem isEmbedding_completion_inr : IsEmbedding (completion.inr I M) := by
   exact isEmbedding_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
 
@@ -974,6 +1234,9 @@ theorem isClosedEmbedding_completion_inr [HasInvarianceOfDomain E] :
 
 theorem injective_completion_inr : Injective (completion.inr I M) := by
    exact injective_glued_inr (I.boundary M) (tail_bdry I M) (completion_gluing I M)
+
+theorem continuous_completion_zero : Continuous (completion.zero I M) := by
+  exact (ConcreteCategory.hom <| completion.zero I M).continuous
 
 theorem isEmbedding_completion_zero : IsEmbedding (completion.zero I M) := by
   exact isEmbedding_glued_zero (I.boundary M) (tail_bdry I M) (completion_gluing I M)
